@@ -1,3 +1,10 @@
+{-| This module represents an extension to 'hasql-pool', it allows for a mix of dynamic credentials
+    and static settings for connections in a pool.
+    Due to the fact that the module tries to extend 'hasql-pool' rather than rewrite it, the exposed API relies on
+    combining existing 'hasql' types with new types, whereas a rewrite would just extend the original types.
+    It is done so to simplify maintenance of the extended functionality and make it more compatible with any
+    future development of 'hasql-pool'.
+-}
 module Hasql.Pool
 (   Pool
 ,   Settings(..)
@@ -22,7 +29,7 @@ import           Hasql.Pool.Observer (Observed(..), ObserverAction)
 
 
 -- |
--- A pool of connections to DB.
+-- A pool of open DB connections.
 newtype Pool =
     Pool (ResourcePool.Pool (Either Hasql.Connection.ConnectionError Hasql.Connection.Connection))
     deriving (Show)
@@ -33,7 +40,8 @@ type PoolStripes      = Int
 type ResidenceTimeout = NominalDiffTime
 
 -- |
--- Connection getter action that allows for obtaining Postgres connection settings via external rsources such as AWS tokens etc.
+-- Connection getter action that allows for obtaining Postgres connection settings
+-- via external resources such as AWS tokens etc.
 type ConnectionGetter = IO (Either Hasql.Connection.ConnectionError Hasql.Connection.Connection)
 
 -- |
@@ -74,7 +82,7 @@ acquireWith stripes connGetter (size, timeout, connectionSettings) =
 
 
 -- |
--- Release the connection-pool.
+-- Release the connection-pool by closing and removing all connections.
 release :: Pool -> IO ()
 release (Pool pool) =
     ResourcePool.destroyAllResources pool
@@ -120,8 +128,9 @@ useWithObserver observer (Pool pool) session =
 
 
 getPoolStats :: Pool -> IO ResourcePool.Stats
-getPoolStats (Pool p) = ResourcePool.stats p performStatsReset where
-    performStatsReset = False
+getPoolStats (Pool p) = ResourcePool.stats p performStatsReset
+    where
+        performStatsReset = False
 
 
 getPoolUsageStat :: Pool -> IO PoolSize

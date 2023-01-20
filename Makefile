@@ -1,4 +1,3 @@
-
 PROJECT_NAME            := hasql-resource-pool
 
 # https://www.gnu.org/software/make/manual/html_node/Special-Variables.html
@@ -10,6 +9,7 @@ PROJECT_ROOT            := $(PROJECT_MKFILE_DIR)
 LOCAL_UNTRACK_DIR       := $(PROJECT_MKFILE_DIR)/.local
 CABAL_BUILD_DIR			:= $(CABAL_DIR)
 DISTRIBUTIONS           := $(CABAL_BUILD_DIR)/sdist
+BACKEND_CABAL_CMD       := CABAL_BUILDDIR=$(CABAL_BUILD_DIR) cabal --project-file=$(PROJECT_ROOT)/cabal.project
 
 
 $(PROJECT_ROOT)/cabal.project.local:
@@ -18,30 +18,30 @@ $(PROJECT_ROOT)/cabal.project.local:
 
 .PHONY: update-local
 update-local:
-	cabal v2-update 	--builddir $(CABAL_BUILD_DIR)
-	cabal v2-configure	--builddir $(CABAL_BUILD_DIR)
+	$(BACKEND_CABAL_CMD) v2-update
+	$(BACKEND_CABAL_CMD) v2-configure
 
 
 .PHONY: build-local
 build-local:	$(PROJECT_ROOT)/library					\
 				$(PROJECT_ROOT)/$(PROJECT_NAME).cabal	\
 				$(PROJECT_ROOT)/cabal.project.local
-	cabal v2-build all --builddir $(CABAL_BUILD_DIR)
+	$(BACKEND_CABAL_CMD) v2-build all
 
 
 .PHONY: repl
 repl:	build-local
-	cabal v2-repl hasql-resource-pool --builddir $(CABAL_BUILD_DIR)
+	$(BACKEND_CABAL_CMD) v2-repl $(PROJECT_NAME)
 
 
 .PHONY: run
 run:
-	cabal v2-run -- --help
+	$(BACKEND_CABAL_CMD) v2-run -- --help
 
 
 .PHONY: test
 test:
-	cabal v2-test all --builddir $(CABAL_BUILD_DIR)
+	$(BACKEND_CABAL_CMD) v2-test all
 
 
 .PHONY: run-example
@@ -51,7 +51,7 @@ run-example:
 
 .PHONY: distribute
 distribute: build-local
-	cabal v2-sdist --builddir $(CABAL_BUILD_DIR)
+	$(BACKEND_CABAL_CMD) v2-sdist
 
 
 .PHONY: publish
