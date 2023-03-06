@@ -9,6 +9,7 @@ module Hasql.Pool
 (   Pool
 ,   Settings(..)
 ,   UsageError(..)
+,   ConnectionGetter
 ,   acquire
 ,   acquireWith
 ,   release
