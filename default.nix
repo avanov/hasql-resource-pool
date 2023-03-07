@@ -13,8 +13,6 @@ let
         haskellCompiler  = haskellCompiler;
         isHaskellWithGMP = withGMP;
         haskellLibraries = hackagePkgs: with hackagePkgs; [
-            haskell-language-server
-            stylish-haskell
             cabal-install
             cabal2nix
         ];
@@ -36,6 +34,8 @@ let
             gitAndTools.pre-commit
             postgresql
             ghcEnv.ghc
+            haskell-language-server
+            stylish-haskell
             zlib
         ] ++ macOsDeps;
         shellHook = ''
