@@ -1,21 +1,22 @@
-{}:
+{   # To see the list of available compilers in the current nixpkgs snapshot, run 'make list-ghc-versions'
+    haskellCompiler ? "ghc944"
+    # this affects static linking as well as licensing mode,
+    # GMP assumes GPL license fsor the entire project if linked statically
+,   withGMP         ? false
+}:
 
 let
-    commonEnvs = builtins.fetchGit {
-        url = "https://github.com/avanov/nix-common.git";
-        ref = "master";
-        rev = "be2dc05bf6beac92fc12da9a2adae6994c9f2ee6";
+    commonEnv       = import ./nixpkgs {};
+    pkgs            = commonEnv.pkgs;
+    ghcEnv          = commonEnv.ghcEnv {
+        pkgs             = pkgs;
+        haskellCompiler  = haskellCompiler;
+        isHaskellWithGMP = withGMP;
+        haskellLibraries = hackagePkgs: with hackagePkgs; [
+            cabal-install
+            cabal2nix
+        ];
     };
-    ghcEnv  = import "${commonEnvs}/ghc-env.nix"
-                {   haskellLibraries = pkgSet: with pkgSet; [
-                        haskell-language-server
-                        stylish-haskell
-                        cabal-install
-                        cabal2nix
-                    ];
-
-                };
-    pkgs    = ghcEnv.pkgs;
 
     macOsDeps = with pkgs; lib.optionals stdenv.isDarwin [
         darwin.apple_sdk.frameworks.CoreServices
@@ -33,6 +34,8 @@ let
             gitAndTools.pre-commit
             postgresql
             ghcEnv.ghc
+            haskell-language-server
+            stylish-haskell
             zlib
         ] ++ macOsDeps;
         shellHook = ''
@@ -43,7 +46,7 @@ let
             export CABAL_DIR=$PWD/.local/${builtins.currentSystem}/cabal
 
             # symbolic link to Language Server to satisfy VSCode Haskell plugins
-            ln -s -f `which haskell-language-server` $PWD/hls.exe
+            ln -s -f `which haskell-language-server-wrapper` $PWD/hls.exe
         '';
     };
 

@@ -14,4 +14,3 @@ newtype Observed = Observed
 
 
 type ObserverAction = Observed -> IO ()
-
