@@ -1,3 +1,9 @@
+# 0.6.0.0
+
+* Upgrade to support [`reasource-pool`](https://github.com/scrive/pool) from the new maintainer.
+* `acquireWith` no longer accepts the stripes number, due to semantic changes in `resource-pool`.
+
+
 # 0.5.4.1
 
 * Upgrade to support breaking changes of `hasql-1.6.3`. No breaking changes introduced to the library.

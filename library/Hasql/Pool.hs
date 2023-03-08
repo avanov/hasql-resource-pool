@@ -10,22 +10,25 @@ module Hasql.Pool
 ,   Settings(..)
 ,   UsageError(..)
 ,   ConnectionGetter
+,   Stats(..)
+,   stats
+,   getPoolUsageStat
 ,   acquire
 ,   acquireWith
 ,   release
 ,   use
 ,   useWithObserver
-,   getPoolUsageStat
+,   withResourceOnEither
 )
 where
 
 import qualified Data.Pool as ResourcePool
+import qualified Data.Pool.Internal as Unstable
 import           System.Clock (Clock(Monotonic), diffTimeSpec, getTime, toNanoSecs)
 
 import           Hasql.Pool.Prelude
 import qualified Hasql.Connection
 import qualified Hasql.Session
-import qualified Hasql.Pool.ResourcePool as ResourcePool
 import           Hasql.Pool.Observer (Observed(..), ObserverAction)
 
 
@@ -33,7 +36,7 @@ import           Hasql.Pool.Observer (Observed(..), ObserverAction)
 -- A pool of open DB connections.
 newtype Pool =
     Pool (ResourcePool.Pool (Either Hasql.Connection.ConnectionError Hasql.Connection.Connection))
-    deriving (Show)
+
 
 
 type PoolSize         = Int
@@ -64,22 +67,28 @@ type Settings =
 -- create a connection-pool.
 acquire :: Settings -> IO Pool
 acquire settings@(_size, _timeout, connectionSettings) =
-    acquireWith stripes (Hasql.Connection.acquire connectionSettings) settings
-    where
-        stripes = 1
+    acquireWith (Hasql.Connection.acquire connectionSettings) settings
 
 
 -- |
 -- Similar to 'acquire', allows for finer configuration.
-acquireWith :: PoolStripes
-            -> ConnectionGetter
+acquireWith :: ConnectionGetter
             -> Settings
             -> IO Pool
-acquireWith stripes connGetter (size, timeout, connectionSettings) =
-    fmap Pool $
-        ResourcePool.createPool connGetter release stripes timeout size
+acquireWith connGetter (maxSize, timeout, connectionSettings) =
+    fmap Pool $ createPool connGetter release timeout maxSize
     where
         release = either (const (pure ())) Hasql.Connection.release
+
+
+createPool :: IO a
+           -> (a -> IO ())
+           -> NominalDiffTime
+           -> Int
+           -> IO (ResourcePool.Pool a)
+createPool create free idleTime maxResources = ResourcePool.newPool cfg where
+    -- defaultPoolConfig create free cacheTTL maxResources = PoolConfig
+    cfg = ResourcePool.defaultPoolConfig create free (realToFrac idleTime) maxResources
 
 
 -- |
@@ -110,7 +119,7 @@ useWithObserver :: Maybe ObserverAction
                 -> IO (Either UsageError a)
 useWithObserver observer (Pool pool) session =
     fmap (either (Left . ConnectionError) (either (Left . SessionError) Right)) $
-    ResourcePool.withResourceOnEither pool $
+    withResourceOnEither pool $
     traverse runQuery
     where
         runQuery dbConn = maybe action (runWithObserver action) observer
@@ -128,12 +137,48 @@ useWithObserver observer (Pool pool) session =
             doObserve observed >> pure result
 
 
-getPoolStats :: Pool -> IO ResourcePool.Stats
-getPoolStats (Pool p) = ResourcePool.stats p performStatsReset
-    where
-        performStatsReset = False
+withResourceOnEither :: ResourcePool.Pool resource
+                     -> (resource -> IO (Either failure success))
+                     -> IO (Either failure success)
+withResourceOnEither pool act = mask_ $ do
+    (resource, localPool) <- ResourcePool.takeResource pool
+    failureOrSuccess      <- act resource `onException` ResourcePool.destroyResource pool localPool resource
+    case failureOrSuccess of
+        Right success -> do
+            ResourcePool.putResource localPool resource
+            pure $ Right success
+        Left failure -> do
+            ResourcePool.destroyResource pool localPool resource
+            pure $ Left failure
+
+
+data Stats = Stats
+    {   currentUsage  :: !Int
+        -- ^ Current number of items.
+    ,   available     :: !Int
+        -- ^ Total items available for consumption.
+    } deriving Show
+
+
+stats :: Pool -> IO Stats
+stats (Pool pool) = currentlyAvailablePerStripe >>= collect where
+    -- attributes extraction and counting
+    collect xs = pure $ Stats inUse avail where
+        inUse = maxResources - avail
+        avail = sum xs
+
+    currentlyAvailablePerStripe = traverse id peekAvailable
+    peekAvailable               = (fmap stripeAvailability) <$> allStripes    -- array of IO Int
+    stripeAvailability ms       = maybe quotaPerStripe Unstable.available ms  -- if the stripe ref is uninitialised, count the default availability
+    allStripes                  = peekStripe <$> Unstable.localPools pool     -- array of IO Maybe
+    peekStripe                  = tryReadMVar . Unstable.stripeVar
+
+    -- data from the pool
+    quotaPerStripe              = maxResources `quotCeil` numStripes
+    numStripes                  = length $ Unstable.localPools pool  -- can be 'sizeofSmallArray' but requires 'primitive' as dependency
+    maxResources                = Unstable.poolMaxResources . Unstable.poolConfig $ pool
+    quotCeil x y                = let (z, r) = x `quotRem` y in if r == 0 then z else z + 1  -- copied from 'Data.Pool.Internal'
 
 
 getPoolUsageStat :: Pool -> IO PoolSize
-getPoolUsageStat pool = getPoolStats pool >>= gather where
-    gather = pure . ResourcePool.currentUsage . ResourcePool.poolStats
+getPoolUsageStat pool = stats pool >>= (pure . currentUsage)

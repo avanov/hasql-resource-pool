@@ -46,7 +46,7 @@ let
             export CABAL_DIR=$PWD/.local/${builtins.currentSystem}/cabal
 
             # symbolic link to Language Server to satisfy VSCode Haskell plugins
-            ln -s -f `which haskell-language-server` $PWD/hls.exe
+            ln -s -f `which haskell-language-server-wrapper` $PWD/hls.exe
         '';
     };
 

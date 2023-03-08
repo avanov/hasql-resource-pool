@@ -1,8 +1,8 @@
 name:           hasql-resource-pool
-version:        0.5.4.1
+version:        0.6.0.0
 category:       Hasql, Database, PostgreSQL
 synopsis:       A pool of connections for Hasql based on resource-pool.
-description:    This package is derived from hasql-pool v0.5.2.2 and continues using resource-pool for an underlying pool implementation.
+description:    This package is originally derived from hasql-pool v0.5.2.2 and continues using `resource-pool` for its pool implementation.
 homepage:       https://github.com/avanov/hasql-resource-pool
 bug-reports:    https://github.com/avanov/hasql-resource-pool/issues
 author:         Nikita Volkov <nikita.y.volkov@mail.ru>
@@ -29,15 +29,14 @@ library
     Arrows, BangPatterns, ConstraintKinds, DataKinds, DefaultSignatures, DeriveDataTypeable, DeriveFoldable, DeriveFunctor, DeriveGeneric, DeriveTraversable, EmptyDataDecls, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GADTs, GeneralizedNewtypeDeriving, LambdaCase, LiberalTypeSynonyms, MagicHash, MultiParamTypeClasses, MultiWayIf, NoImplicitPrelude, NoMonomorphismRestriction, OverloadedStrings, PatternGuards, ParallelListComp, QuasiQuotes, RankNTypes, RecordWildCards, ScopedTypeVariables, StandaloneDeriving, TemplateHaskell, TupleSections, TypeFamilies, TypeOperators, UnboxedTuples
   default-language:
     Haskell2010
-  other-modules:
-    Hasql.Pool.Prelude
-    Hasql.Pool.ResourcePool
   exposed-modules:
     Hasql.Pool
     Hasql.Pool.Observer
+  other-modules:
+    Hasql.Pool.Prelude
   build-depends:
     -- resources:
-    resource-pool-fork-avanov,
+    resource-pool >= 0.4.0.0,
     -- database:
     hasql >= 1.6.3,
     -- data:
