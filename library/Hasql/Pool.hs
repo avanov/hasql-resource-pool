@@ -1,10 +1,3 @@
-{-| This module represents an extension to 'hasql-pool', it allows for a mix of dynamic credentials
-    and static settings for connections in a pool.
-    Due to the fact that the module tries to extend 'hasql-pool' rather than rewrite it, the exposed API relies on
-    combining existing 'hasql' types with new types, whereas a rewrite would just extend the original types.
-    It is done so to simplify maintenance of the extended functionality and make it more compatible with any
-    future development of 'hasql-pool'.
--}
 module Hasql.Pool
 (   Pool
 ,   Settings(..)
