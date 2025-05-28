@@ -81,12 +81,6 @@ sslmode         = Hasql.Connection.Setting.Connection.Param.other "sslmode"
 sslrootcert     = Hasql.Connection.Setting.Connection.Param.other "sslrootcert"
 
 
--- [ "connect_timeout=" <> (render . Env.backendDbConnectTimeout) env
--- , "sslmode=" <> (render . Env.backendDbConnectionTlsMode) env
--- , "sslrootcert=" <> (toBytes . Env.backendDbConnectionTlsRootcertFile) env
--- ]
-
-
 -- |
 -- Given the pool-size, timeout and connection settings
 -- create a connection-pool.
