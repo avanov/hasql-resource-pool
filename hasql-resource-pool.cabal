@@ -73,13 +73,13 @@ library
         Hasql.Pool.Prelude
     build-depends:
         -- resources:
-        ,   resource-pool >= 0.4.0.0
+        ,   resource-pool >= 0.4.0.0 && < 1
         -- database:
         ,   hasql         >= 1.9.1.2 && < 2
         -- data:
         ,   time          >= 1.5 && < 2
-        ,   clock         >= 0.8
-        ,   text          >= 2.0
+        ,   clock         >= 0.8 && < 1
+        ,   text          >= 2.0 && < 3
         -- general:
         ,   base-prelude  >= 1 && < 2
 
