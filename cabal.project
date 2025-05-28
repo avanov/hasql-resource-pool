@@ -1,4 +1,12 @@
 packages: ./*.cabal
 
 package hasql-resource-pool
-    ghc-options:  -Werror
+    ghc-options:
+        -Wall
+        -Werror
+        -Wcompat
+        -Wincomplete-record-updates
+        -Wincomplete-uni-patterns
+        -Wredundant-constraints
+        -Wunused-packages
+        -Wno-missing-signatures

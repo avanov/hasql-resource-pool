@@ -1,3 +1,8 @@
+# 1.9.1.2
+
+* Breaking change: the API is made compatible with `hasql-1.9.1.2`
+* Follow the type errors to correct missing connection settings, they should be self-explanatory.
+
 # 0.6.0.0
 
 * Upgrade to support [`reasource-pool`](https://github.com/scrive/pool) from the new maintainer.

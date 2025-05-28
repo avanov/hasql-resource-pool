@@ -1,6 +1,8 @@
+{-# LANGUAGE OverloadedRecordDot #-}
 module Hasql.Pool
 (   Pool
-,   Settings(..)
+,   Settings
+,   ConnectionSettings(..)
 ,   UsageError(..)
 ,   ConnectionGetter
 ,   Stats(..)
@@ -15,14 +17,18 @@ module Hasql.Pool
 )
 where
 
-import qualified Data.Pool as ResourcePool
-import qualified Data.Pool.Internal as Unstable
-import           System.Clock (Clock(Monotonic), diffTimeSpec, getTime, toNanoSecs)
+import qualified    Data.Pool           as ResourcePool
+import qualified    Data.Text           as T
+import qualified    Data.Pool.Internal  as Unstable
+import              System.Clock        (Clock(Monotonic), diffTimeSpec, getTime, toNanoSecs)
 
-import           Hasql.Pool.Prelude
-import qualified Hasql.Connection
-import qualified Hasql.Session
-import           Hasql.Pool.Observer (Observed(..), ObserverAction)
+import              Hasql.Pool.Prelude
+import qualified    Hasql.Connection
+import qualified    Hasql.Connection.Setting
+import qualified    Hasql.Connection.Setting.Connection
+import qualified    Hasql.Connection.Setting.Connection.Param
+import qualified    Hasql.Session
+import              Hasql.Pool.Observer (Observed(..), ObserverAction)
 
 
 -- |
@@ -33,7 +39,6 @@ newtype Pool =
 
 
 type PoolSize         = Int
-type PoolStripes      = Int
 type ResidenceTimeout = NominalDiffTime
 
 -- |
@@ -52,15 +57,58 @@ type ConnectionGetter = IO (Either Hasql.Connection.ConnectionError Hasql.Connec
 --
 -- * Connection settings.
 --
-type Settings =
-  (PoolSize, ResidenceTimeout, Hasql.Connection.Settings)
+type Settings = (PoolSize, ResidenceTimeout, ConnectionSettings)
+
+-- | Extended connection settings
+data ConnectionSettings = ConnectionSettings
+    {   host            :: T.Text
+    ,   port            :: Word16
+    ,   user            :: T.Text
+    ,   password        :: T.Text
+    ,   dbName          :: T.Text
+    ,   connAcqTimeout  :: Word16   -- ^ Zero, negative, or not specified means wait indefinitely.
+    ,   sslMode         :: T.Text   -- ^ See https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNECT-SSLMODE
+    ,   sslRootCert     :: T.Text   -- ^ See https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNECT-SSLROOTCERT
+    }
+
+-- | https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNECT-CONNECT-TIMEOUT
+connectTimeout  = Hasql.Connection.Setting.Connection.Param.other "connect_timeout"
+
+-- | https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNECT-SSLMODE
+sslmode         = Hasql.Connection.Setting.Connection.Param.other "sslmode"
+
+-- | https://www.postgresql.org/docs/17/libpq-connect.html#LIBPQ-CONNECT-SSLROOTCERT
+sslrootcert     = Hasql.Connection.Setting.Connection.Param.other "sslrootcert"
+
+
+-- [ "connect_timeout=" <> (render . Env.backendDbConnectTimeout) env
+-- , "sslmode=" <> (render . Env.backendDbConnectionTlsMode) env
+-- , "sslrootcert=" <> (toBytes . Env.backendDbConnectionTlsRootcertFile) env
+-- ]
+
 
 -- |
 -- Given the pool-size, timeout and connection settings
 -- create a connection-pool.
 acquire :: Settings -> IO Pool
-acquire settings@(_size, _timeout, connectionSettings) =
-    acquireWith (Hasql.Connection.acquire connectionSettings) settings
+acquire settings@(_, _, cset) =
+    acquireWith
+        (Hasql.Connection.acquire
+            [   Hasql.Connection.Setting.connection
+                    ( Hasql.Connection.Setting.Connection.params
+                        [   Hasql.Connection.Setting.Connection.Param.host      cset.host
+                        ,   Hasql.Connection.Setting.Connection.Param.port      cset.port
+                        ,   Hasql.Connection.Setting.Connection.Param.user      cset.user
+                        ,   Hasql.Connection.Setting.Connection.Param.password  cset.password
+                        ,   Hasql.Connection.Setting.Connection.Param.dbname    cset.dbName
+                        ,   (connectTimeout . T.pack . show)                    cset.connAcqTimeout
+                        ,   sslmode                                             cset.sslMode
+                        ,   sslrootcert                                         cset.sslRootCert
+                        ]
+                    )
+            ]
+        )
+        settings
 
 
 -- |
@@ -68,10 +116,10 @@ acquire settings@(_size, _timeout, connectionSettings) =
 acquireWith :: ConnectionGetter
             -> Settings
             -> IO Pool
-acquireWith connGetter (maxSize, timeout, connectionSettings) =
-    fmap Pool $ createPool connGetter release timeout maxSize
+acquireWith connGetter (maxSize, sTimeout, _connectionSettings) =
+    Pool <$> createPool connGetter releaseConn sTimeout maxSize
     where
-        release = either (const (pure ())) Hasql.Connection.release
+        releaseConn = either (const (pure ())) Hasql.Connection.release
 
 
 createPool :: IO a
@@ -95,7 +143,7 @@ release (Pool pool) =
 -- A union over the connection establishment error and the session error.
 data UsageError
     =   ConnectionError Hasql.Connection.ConnectionError
-    |   SessionError    Hasql.Session.QueryError
+    |   SessionError    Hasql.Session.SessionError
     deriving (Show, Eq)
 
 -- |
