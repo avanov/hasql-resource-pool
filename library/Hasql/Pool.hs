@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 module Hasql.Pool
 (   Pool
+,   PoolSize
 ,   Settings
 ,   ConnectionSettings(..)
 ,   UsageError(..)
@@ -126,7 +127,7 @@ acquireWith connGetter (maxSize, sTimeout, _connectionSettings) =
 createPool :: IO a
            -> (a -> IO ())
            -> NominalDiffTime
-           -> Int
+           -> PoolSize
            -> IO (ResourcePool.Pool a)
 createPool create free idleTime maxResources = ResourcePool.newPool cfg where
     -- defaultPoolConfig create free cacheTTL maxResources = PoolConfig
