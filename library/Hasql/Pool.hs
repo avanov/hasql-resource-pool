@@ -14,6 +14,7 @@ module Hasql.Pool
 ,   use
 ,   useWithObserver
 ,   withResourceOnEither
+,   extendedConnectionSettings
 )
 where
 
@@ -88,21 +89,27 @@ acquire :: Settings -> IO Pool
 acquire settings@(_, _, cset) =
     acquireWith
         (Hasql.Connection.acquire
-            [   Hasql.Connection.Setting.connection
-                    ( Hasql.Connection.Setting.Connection.params
-                        [   Hasql.Connection.Setting.Connection.Param.host      cset.host
-                        ,   Hasql.Connection.Setting.Connection.Param.port      cset.port
-                        ,   Hasql.Connection.Setting.Connection.Param.user      cset.user
-                        ,   Hasql.Connection.Setting.Connection.Param.password  cset.password
-                        ,   Hasql.Connection.Setting.Connection.Param.dbname    cset.dbName
-                        ,   (connectTimeout . T.pack . show)                    cset.connAcqTimeout
-                        ,   sslmode                                             cset.sslMode
-                        ,   sslrootcert                                         cset.sslRootCert
-                        ]
-                    )
+            [   extendedConnectionSettings cset
             ]
         )
         settings
+
+
+-- | Produce connection settings suitable for acquiring a connection, from an extended set of parameters covering ssl options.
+extendedConnectionSettings :: ConnectionSettings -> Hasql.Connection.Setting.Setting
+extendedConnectionSettings cset = 
+    Hasql.Connection.Setting.connection
+        ( Hasql.Connection.Setting.Connection.params
+            [   Hasql.Connection.Setting.Connection.Param.host      cset.host
+            ,   Hasql.Connection.Setting.Connection.Param.port      cset.port
+            ,   Hasql.Connection.Setting.Connection.Param.user      cset.user
+            ,   Hasql.Connection.Setting.Connection.Param.password  cset.password
+            ,   Hasql.Connection.Setting.Connection.Param.dbname    cset.dbName
+            ,   (connectTimeout . T.pack . show)                    cset.connAcqTimeout
+            ,   sslmode                                             cset.sslMode
+            ,   sslrootcert                                         cset.sslRootCert
+            ]
+        )
 
 
 -- |
