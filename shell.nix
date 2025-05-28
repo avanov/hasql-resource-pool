@@ -1,4 +1,4 @@
 let
-    environment = import ./default.nix {};
+    repository = import ./default.nix {};
 in
-    environment.devEnv
+    repository.devEnv
