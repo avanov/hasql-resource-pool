@@ -1,3 +1,8 @@
+# 1.9.1.3
+
+* Support for `resource-pool-0.5.0.0`
+
+
 # 1.9.1.2
 
 * Breaking change: the API is made compatible with `hasql-1.9.1.2`
