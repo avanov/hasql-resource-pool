@@ -1,5 +1,5 @@
 {   # To see the list of available compilers in the current nixpkgs snapshot, run 'make list-ghc-versions'
-    haskellVersion  ? "966"
+    haskellVersion  ? "9102"
 ,   haskellCompiler ? "ghc"
     # this affects static linking as well as licensing mode,
     # GMP assumes GPL license for the entire project if linked statically
@@ -55,8 +55,6 @@ let
             gitAndTools.pre-commit
             postgresql
             ghcEnv.ghc
-            haskell-language-server
-            stylish-haskell
             zlib
         ] ++ macOsDeps;
         shellHook = ''

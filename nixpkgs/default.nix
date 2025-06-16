@@ -1,13 +1,13 @@
-{   supportedGhcVersions ?  [ "966" ]
+{   supportedGhcVersions ?  [ "9102" ]
 }:
 
 let
 
 common-src = builtins.fetchTarball {
-    name = "common-2025-02-04";
-    url = https://github.com/avanov/nix-common/archive/c1b4f92477c37ff7a387cc7c81061dd9bd510014.tar.gz;
+    name = "common-2025-06-15";
+    url = https://github.com/avanov/nix-common/archive/5a6693b065ceac109576a05df991190f842b33c0.tar.gz;
     # Hash obtained using `nix-prefetch-url --unpack <url>`
-    sha256 = "sha256:12rqz684949638zqbksl2z73lcy6khzxx46p095wpz6jh503kkgg";
+    sha256 = "sha256:1k2bbs9mhybssxx5m57c48p2yd3xsxii7n3fmkgpgjmhin8praa9";
 };
 
 overlays    = import ./overlays.nix {};
