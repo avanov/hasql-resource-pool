@@ -19,10 +19,10 @@ module Hasql.Pool
 )
 where
 
-import qualified    Data.Pool           as ResourcePool
-import qualified    Data.Text           as T
-import qualified    Data.Pool.Internal  as Unstable
-import              System.Clock        (Clock(Monotonic), diffTimeSpec, getTime, toNanoSecs)
+import qualified    Data.Pool                                   as ResourcePool
+import qualified    Data.Text                                   as T
+import qualified    Data.Pool.Internal                          as Unstable
+import              System.Clock                                (Clock(Monotonic), diffTimeSpec, getTime, toNanoSecs)
 
 import              Hasql.Pool.Prelude
 import qualified    Hasql.Connection
@@ -30,7 +30,7 @@ import qualified    Hasql.Connection.Setting
 import qualified    Hasql.Connection.Setting.Connection
 import qualified    Hasql.Connection.Setting.Connection.Param
 import qualified    Hasql.Session
-import              Hasql.Pool.Observer (Observed(..), ObserverAction)
+import              Hasql.Pool.Observer                         (Observed(..), ObserverAction)
 
 
 -- |
@@ -212,14 +212,14 @@ stats (Pool pool) = currentlyAvailablePerStripe >>= collect where
 
     currentlyAvailablePerStripe = traverse id peekAvailable
     peekAvailable               = (fmap stripeAvailability) <$> allStripes    -- array of IO Int
-    stripeAvailability ms       = maybe quotaPerStripe Unstable.available ms  -- if the stripe ref is uninitialised, count the default availability
-    allStripes                  = peekStripe <$> Unstable.localPools pool     -- array of IO Maybe
-    peekStripe                  = tryReadMVar . Unstable.stripeVar
+    stripeAvailability ms       = Unstable.available ms                       -- stripe is always initialized with value, as it's from TVar
+    allStripes                  = peekStripe <$> Unstable.localPools pool     -- array of IO vals
+    peekStripe                  = readTVarIO . Unstable.stripeVar
 
     -- data from the pool
-    quotaPerStripe              = maxResources `quotCeil` numStripes
-    numStripes                  = length $ Unstable.localPools pool  -- can be 'sizeofSmallArray' but requires 'primitive' as dependency
     maxResources                = Unstable.poolMaxResources . Unstable.poolConfig $ pool
+    _quotaPerStripe             = maxResources `quotCeil` _numStripes
+    _numStripes                 = length $ Unstable.localPools pool  -- can be 'sizeofSmallArray' but requires 'primitive' as dependency
     quotCeil x y                = let (z, r) = x `quotRem` y in if r == 0 then z else z + 1  -- copied from 'Data.Pool.Internal'
 
 
